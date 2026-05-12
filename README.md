@@ -1,2 +1,2 @@
 # bootdev_httpserver
-A httpserver written in go
+A http server written in go
