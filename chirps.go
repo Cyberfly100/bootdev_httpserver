@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 type chirp struct {
@@ -26,7 +27,7 @@ func validateChirp(w http.ResponseWriter, c chirp) {
 	const maxChirpLength = 140
 
 	type chirpReply struct {
-		Valid bool `json:"valid"`
+		CleanedBody string `json:"cleaned_body"`
 	}
 
 	if len(c.Body) == 0 {
@@ -40,5 +41,19 @@ func validateChirp(w http.ResponseWriter, c chirp) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, chirpReply{Valid: true})
+	const censorstring = "****"
+	filterProfanity(&c.Body, censorstring)
+
+	respondWithJSON(w, http.StatusOK, chirpReply{CleanedBody: c.Body})
+}
+
+func filterProfanity(body *string, censor string) {
+	profaneWords := []string{"kerfuffle", "sharbert", "fornax"}
+	for _, profanity := range profaneWords {
+		for word := range strings.SplitSeq(*body, " ") {
+			if strings.EqualFold(word, profanity) {
+				*body = strings.ReplaceAll(*body, word, censor)
+			}
+		}
+	}
 }
