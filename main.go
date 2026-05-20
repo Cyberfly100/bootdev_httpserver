@@ -20,6 +20,7 @@ type apiConfig struct {
 func main() {
 	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
+	platform := os.Getenv("PLATFORM")
 	dbConn, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("Could not connect to database: %v", err)
@@ -37,8 +38,12 @@ func main() {
 	mux.Handle("/app/", http.StripPrefix("/app/", apiCfg.middlewareMetricsInc(http.FileServer(http.Dir(".")))))
 	mux.HandleFunc("GET /api/healthz", handleReadiness)
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handleMetrics)
-	mux.HandleFunc("POST /admin/reset", apiCfg.handleResetMetrics)
+	mux.HandleFunc("POST /admin/resetmetrics", apiCfg.handleResetMetrics)
 	mux.HandleFunc("POST /api/validate_chirp", handleValidateChirp)
+	mux.HandleFunc("POST /api/users", apiCfg.handleCreateUser)
+	if platform == "dev" {
+		mux.HandleFunc("POST /admin/reset", apiCfg.handleReset)
+	}
 
 	server := &http.Server{
 		Addr:    ":" + port,
