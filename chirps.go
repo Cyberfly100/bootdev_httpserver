@@ -3,48 +3,37 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/Cyberfly100/bootdev_httpserver/internal/database"
+	"github.com/google/uuid"
 )
 
-type chirp struct {
-	Body string `json:"body"`
+type Chirp struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserID    uuid.UUID `json:"user_id"`
 }
 
-func handleValidateChirp(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var c chirp
-	err := decoder.Decode(&c)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Could not decode chirps JSON", err)
-		return
-	}
-
-	validateChirp(w, c)
-}
-
-func validateChirp(w http.ResponseWriter, c chirp) {
+func validateChirp(chirpParams *database.CreateChirpParams) error {
 	const maxChirpLength = 140
 
-	type chirpReply struct {
-		CleanedBody string `json:"cleaned_body"`
+	if len(chirpParams.Body) == 0 {
+		return fmt.Errorf("Chirp body cannot be empty")
 	}
 
-	if len(c.Body) == 0 {
-		respondWithError(w, http.StatusBadRequest, "Chirp body cannot be empty", nil)
-		return
-	}
-
-	if len(c.Body) > maxChirpLength {
-		msg := fmt.Sprintf("Chirp body cannot exceed %d characters", maxChirpLength)
-		respondWithError(w, http.StatusBadRequest, msg, nil)
-		return
+	if len(chirpParams.Body) > maxChirpLength {
+		return fmt.Errorf("Chirp body cannot exceed %d characters", maxChirpLength)
 	}
 
 	const censorstring = "****"
-	filterProfanity(&c.Body, censorstring)
-
-	respondWithJSON(w, http.StatusOK, chirpReply{CleanedBody: c.Body})
+	filterProfanity(&chirpParams.Body, censorstring)
+	return nil
 }
 
 func filterProfanity(body *string, censor string) {
@@ -56,4 +45,52 @@ func filterProfanity(body *string, censor string) {
 			}
 		}
 	}
+}
+
+func (cfg *apiConfig) handleCreateChirp(w http.ResponseWriter, r *http.Request) {
+	type ChirpParams struct {
+		Body   string    `json:"body"`
+		UserID uuid.UUID `json:"user_id"`
+	}
+	var chirpParams ChirpParams
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Failed to read request body", err)
+		return
+	}
+	r.Body.Close()
+
+	err = json.Unmarshal(body, &chirpParams)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid JSON", err)
+		return
+	}
+
+	dbchirpParams := database.CreateChirpParams{
+		Body:   chirpParams.Body,
+		UserID: chirpParams.UserID,
+	}
+
+	err = validateChirp(&dbchirpParams)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+
+	var dbchirp database.Chirp
+	dbchirp, err = cfg.db.CreateChirp(r.Context(), dbchirpParams)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to create chirp", err)
+		return
+	}
+
+	chirp := Chirp{
+		ID:        dbchirp.ID,
+		CreatedAt: dbchirp.CreatedAt,
+		UpdatedAt: dbchirp.UpdatedAt,
+		Body:      dbchirp.Body,
+		UserID:    dbchirp.UserID,
+	}
+
+	respondWithJSON(w, http.StatusCreated, chirp)
 }

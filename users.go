@@ -18,11 +18,6 @@ type User struct {
 }
 
 func (cfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		respondWithError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
-		return
-	}
-
 	var dbuser database.User
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
