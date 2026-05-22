@@ -14,3 +14,8 @@ SELECT *
 FROM chirps
 ORDER BY created_at
 LIMIT $1;
+
+-- name: GetChirpByID :one
+SELECT *
+FROM chirps
+WHERE id = $1;
