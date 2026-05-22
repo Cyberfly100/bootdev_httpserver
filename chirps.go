@@ -94,3 +94,23 @@ func (cfg *apiConfig) handleCreateChirp(w http.ResponseWriter, r *http.Request) 
 
 	respondWithJSON(w, http.StatusCreated, chirp)
 }
+
+func (cfg *apiConfig) handleGetChirps(w http.ResponseWriter, r *http.Request) {
+	const defaultLimit = 100
+	dbchirps, err := cfg.db.GetChirps(r.Context(), defaultLimit)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to retrieve chirps", err)
+		return
+	}
+	chirps := make([]Chirp, len(dbchirps))
+	for i, dbchirp := range dbchirps {
+		chirps[i] = Chirp{
+			ID:        dbchirp.ID,
+			CreatedAt: dbchirp.CreatedAt,
+			UpdatedAt: dbchirp.UpdatedAt,
+			Body:      dbchirp.Body,
+			UserID:    dbchirp.UserID,
+		}
+	}
+	respondWithJSON(w, http.StatusOK, chirps)
+}

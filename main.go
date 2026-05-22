@@ -41,6 +41,7 @@ func main() {
 	mux.HandleFunc("POST /admin/resetmetrics", apiCfg.handleResetMetrics)
 	mux.HandleFunc("POST /api/chirps", apiCfg.handleCreateChirp)
 	mux.HandleFunc("POST /api/users", apiCfg.handleCreateUser)
+	mux.HandleFunc("GET /api/chirps", apiCfg.handleGetChirps)
 	if platform == "dev" {
 		mux.HandleFunc("POST /admin/reset", apiCfg.handleReset)
 	}
