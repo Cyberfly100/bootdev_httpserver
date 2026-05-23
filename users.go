@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Cyberfly100/bootdev_httpserver/internal/auth"
 	"github.com/Cyberfly100/bootdev_httpserver/internal/database"
 	"github.com/google/uuid"
 )
@@ -18,7 +19,11 @@ type User struct {
 }
 
 func (cfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
-	var dbuser database.User
+	userparams := struct {
+		Email          string `json:"email"`
+		HashedPassword string `json:"password"`
+	}{}
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Failed to read request body", err)
@@ -26,13 +31,25 @@ func (cfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Body.Close()
 
-	err = json.Unmarshal(body, &dbuser)
+	err = json.Unmarshal(body, &userparams)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	dbuser, err = cfg.db.CreateUser(r.Context(), dbuser.Email)
+	dbuserparams := database.CreateUserParams{
+		Email:          userparams.Email,
+		HashedPassword: userparams.HashedPassword,
+	}
+
+	dbuserparams.HashedPassword, err = auth.HashPassword(dbuserparams.HashedPassword)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to hash password", err)
+		return
+	}
+
+	var dbuser database.CreateUserRow
+	dbuser, err = cfg.db.CreateUser(r.Context(), dbuserparams)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to create user", err)
 		return
@@ -62,4 +79,44 @@ func (cfg *apiConfig) handleReset(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Users reset"))
+}
+
+func (cgf *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
+	loginParams := struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}{}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Failed to read request body", err)
+		return
+	}
+	r.Body.Close()
+
+	err = json.Unmarshal(body, &loginParams)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid JSON", err)
+		return
+	}
+
+	user, err := cgf.db.GetUserByEmail(r.Context(), loginParams.Email)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", nil)
+		return
+	}
+
+	match, err := auth.CheckPasswordHash(loginParams.Password, user.HashedPassword)
+	if err != nil || !match {
+		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", nil)
+		return
+	}
+	returnUser := User{
+		ID:        user.ID,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+		Email:     user.Email,
+	}
+
+	respondWithJSON(w, http.StatusOK, returnUser)
 }
