@@ -3,6 +3,9 @@ package auth
 import (
 	"math/rand"
 	"testing"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 func TestComplexPasswordHashing(t *testing.T) {
@@ -87,5 +90,51 @@ func TestHashingLongPassword(t *testing.T) {
 	}
 	if !match {
 		t.Errorf("Expected long password to match its hash, but it did not")
+	}
+}
+
+func TestJWTValidation(t *testing.T) {
+	userID := uuid.New()
+	tokenSecret := "mysecretkey"
+	token, err := MakeJWT(userID, tokenSecret, time.Hour)
+	if err != nil {
+		t.Fatalf("Failed to create JWT: %v", err)
+	}
+
+	validatedUserID, err := ValidateJWT(token, tokenSecret)
+	if err != nil {
+		t.Fatalf("Failed to validate JWT: %v", err)
+	}
+	if validatedUserID != userID {
+		t.Errorf("Expected validated user ID to match original user ID, but it did not")
+	}
+}
+
+func TestJWTValidationWithWrongSecret(t *testing.T) {
+	userID := uuid.New()
+	tokenSecret := "mysecretkey"
+	token, err := MakeJWT(userID, tokenSecret, time.Hour)
+	if err != nil {
+		t.Fatalf("Failed to create JWT: %v", err)
+	}
+
+	wrongSecret := "wrongsecretkey"
+	_, err = ValidateJWT(token, wrongSecret)
+	if err == nil {
+		t.Errorf("Expected validation to fail with wrong secret, but it succeeded")
+	}
+}
+
+func TestJWTValidationWithExpiredToken(t *testing.T) {
+	userID := uuid.New()
+	tokenSecret := "mysecretkey"
+	token, err := MakeJWT(userID, tokenSecret, -time.Hour) // Token that expired an hour ago
+	if err != nil {
+		t.Fatalf("Failed to create JWT: %v", err)
+	}
+
+	_, err = ValidateJWT(token, tokenSecret)
+	if err == nil {
+		t.Errorf("Expected validation to fail with expired token, but it succeeded")
 	}
 }
