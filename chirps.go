@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Cyberfly100/bootdev_httpserver/internal/auth"
 	"github.com/Cyberfly100/bootdev_httpserver/internal/database"
 	"github.com/google/uuid"
 )
@@ -48,9 +49,20 @@ func filterProfanity(body *string, censor string) {
 }
 
 func (cfg *apiConfig) handleCreateChirp(w http.ResponseWriter, r *http.Request) {
+	bearerToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Missing or invalid Authorization header", err)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(bearerToken, cfg.JWTSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid token", err)
+		return
+	}
+
 	type ChirpParams struct {
-		Body   string    `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
+		Body string `json:"body"`
 	}
 	var chirpParams ChirpParams
 	body, err := io.ReadAll(r.Body)
@@ -68,7 +80,7 @@ func (cfg *apiConfig) handleCreateChirp(w http.ResponseWriter, r *http.Request) 
 
 	dbchirpParams := database.CreateChirpParams{
 		Body:   chirpParams.Body,
-		UserID: chirpParams.UserID,
+		UserID: userID,
 	}
 
 	err = validateChirp(&dbchirpParams)

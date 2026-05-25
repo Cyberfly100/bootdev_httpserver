@@ -2,6 +2,7 @@ package auth
 
 import (
 	"math/rand"
+	"net/http"
 	"testing"
 	"time"
 
@@ -136,5 +137,34 @@ func TestJWTValidationWithExpiredToken(t *testing.T) {
 	_, err = ValidateJWT(token, tokenSecret)
 	if err == nil {
 		t.Errorf("Expected validation to fail with expired token, but it succeeded")
+	}
+}
+
+func TestGetBearerToken(t *testing.T) {
+	headers := make(http.Header)
+	headers.Set("Authorization", "Bearer mytoken123")
+	token, err := GetBearerToken(headers)
+	if err != nil {
+		t.Fatalf("Failed to get bearer token: %v", err)
+	}
+	if token != "mytoken123" {
+		t.Errorf("Expected token to be 'mytoken123', but got '%s'", token)
+	}
+}
+
+func TestGetBearerTokenWithMissingHeader(t *testing.T) {
+	headers := make(http.Header)
+	_, err := GetBearerToken(headers)
+	if err == nil {
+		t.Errorf("Expected error when authorization header is missing, but got none")
+	}
+}
+
+func TestGetBearerTokenWithInvalidFormat(t *testing.T) {
+	headers := make(http.Header)
+	headers.Set("Authorization", "InvalidFormat mytoken123")
+	_, err := GetBearerToken(headers)
+	if err == nil {
+		t.Errorf("Expected error when authorization header has invalid format, but got none")
 	}
 }

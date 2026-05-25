@@ -15,12 +15,23 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
+	JWTSecret      string
 }
 
 func main() {
 	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		log.Fatal("DB_URL environment variable is not set")
+	}
+	JWTSecret := os.Getenv("JWT_SECRET")
+	if JWTSecret == "" {
+		log.Fatal("JWT_SECRET environment variable is not set")
+	}
 	platform := os.Getenv("PLATFORM")
+	if platform == "" {
+		log.Fatal("PLATFORM environment variable is not set")
+	}
 	dbConn, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("Could not connect to database: %v", err)
@@ -32,6 +43,7 @@ func main() {
 	apiCfg := &apiConfig{
 		fileserverHits: atomic.Int32{},
 		db:             database.New(dbConn),
+		JWTSecret:      JWTSecret,
 	}
 	mux := http.NewServeMux()
 

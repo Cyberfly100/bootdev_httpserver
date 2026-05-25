@@ -81,18 +81,21 @@ func (cfg *apiConfig) handleReset(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Users reset"))
 }
 
-func (cgf *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
-	loginParams := struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}{}
+type LoginParams struct {
+	Email            string `json:"email"`
+	Password         string `json:"password"`
+	ExpiresInSeconds int    `json:"expires_in_seconds"`
+}
 
+func (cgf *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Failed to read request body", err)
 		return
 	}
 	r.Body.Close()
+
+	var loginParams LoginParams
 
 	err = json.Unmarshal(body, &loginParams)
 	if err != nil {
@@ -111,11 +114,30 @@ func (cgf *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", nil)
 		return
 	}
-	returnUser := User{
+
+	expirationTime := time.Hour
+	if loginParams.ExpiresInSeconds > 0 && loginParams.ExpiresInSeconds < int(expirationTime/time.Second) {
+		expirationTime = time.Duration(loginParams.ExpiresInSeconds) * time.Second
+	}
+
+	authToken, err := auth.MakeJWT(user.ID, cgf.JWTSecret, expirationTime)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to create JWT", err)
+		return
+	}
+
+	returnUser := struct {
+		ID        uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Email     string    `json:"email"`
+		Token     string    `json:"token"`
+	}{
 		ID:        user.ID,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 		Email:     user.Email,
+		Token:     authToken,
 	}
 
 	respondWithJSON(w, http.StatusOK, returnUser)
