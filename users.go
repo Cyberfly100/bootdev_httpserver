@@ -80,3 +80,53 @@ func (cfg *apiConfig) handleReset(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Users reset"))
 }
+
+func (cfg *apiConfig) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
+	userID, err := cfg.validateAccessToken(r)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid access token", err)
+		return
+	}
+	userparams := struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}{}
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Failed to read request body", err)
+		return
+	}
+	r.Body.Close()
+
+	err = json.Unmarshal(body, &userparams)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid JSON", err)
+		return
+	}
+
+	hashedPassword, err := auth.HashPassword(userparams.Password)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to hash password", err)
+		return
+	}
+	dbuserparams := database.UpdateUserParams{
+		ID:             userID,
+		Email:          userparams.Email,
+		HashedPassword: hashedPassword,
+	}
+
+	dbuser, err := cfg.db.UpdateUser(r.Context(), dbuserparams)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to update user", err)
+		return
+	}
+
+	user := User{
+		ID:        dbuser.ID,
+		CreatedAt: dbuser.CreatedAt,
+		UpdatedAt: dbuser.UpdatedAt,
+		Email:     dbuser.Email,
+	}
+
+	respondWithJSON(w, http.StatusOK, user)
+}

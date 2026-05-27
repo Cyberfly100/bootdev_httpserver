@@ -133,3 +133,15 @@ func (cfg *apiConfig) handleRevokeToken(w http.ResponseWriter, r *http.Request) 
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (cfg *apiConfig) validateAccessToken(r *http.Request) (uuid.UUID, error) {
+	bearerToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	userID, err := auth.ValidateJWT(bearerToken, cfg.JWTSecret)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return userID, nil
+}

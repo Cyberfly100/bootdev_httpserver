@@ -58,6 +58,7 @@ func main() {
 	mux.HandleFunc("POST /api/login", apiCfg.handleLogin)
 	mux.HandleFunc("POST /api/refresh", apiCfg.handleRefreshToken)
 	mux.HandleFunc("POST /api/revoke", apiCfg.handleRevokeToken)
+	mux.HandleFunc("PUT /api/users", apiCfg.handleUpdateUser)
 	if platform == "dev" {
 		mux.HandleFunc("POST /admin/reset", apiCfg.handleReset)
 	}
