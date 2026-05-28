@@ -67,6 +67,12 @@ func (cgf *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	isChirpyRed, err := cgf.db.GetChirpyRedStaus(r.Context(), user.ID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to get chirpy red status", err)
+		return
+	}
+
 	returnUser := struct {
 		ID           uuid.UUID `json:"id"`
 		CreatedAt    time.Time `json:"created_at"`
@@ -74,6 +80,7 @@ func (cgf *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		Email        string    `json:"email"`
 		Token        string    `json:"token"`
 		RefreshToken string    `json:"refresh_token,omitempty"`
+		IsChirpyRed  bool      `json:"is_chirpy_red"`
 	}{
 		ID:           user.ID,
 		CreatedAt:    user.CreatedAt,
@@ -81,6 +88,7 @@ func (cgf *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		Email:        user.Email,
 		Token:        authToken,
 		RefreshToken: refreshTokenInfo.Token,
+		IsChirpyRed:  isChirpyRed,
 	}
 
 	respondWithJSON(w, http.StatusOK, returnUser)
