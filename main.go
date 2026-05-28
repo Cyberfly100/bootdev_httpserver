@@ -16,23 +16,12 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
 	JWTSecret      string
+	polkaAPIKey    string
 }
 
 func main() {
-	godotenv.Load()
-	dbURL := os.Getenv("DB_URL")
-	if dbURL == "" {
-		log.Fatal("DB_URL environment variable is not set")
-	}
-	JWTSecret := os.Getenv("JWT_SECRET")
-	if JWTSecret == "" {
-		log.Fatal("JWT_SECRET environment variable is not set")
-	}
-	platform := os.Getenv("PLATFORM")
-	if platform == "" {
-		log.Fatal("PLATFORM environment variable is not set")
-	}
-	dbConn, err := sql.Open("postgres", dbURL)
+
+	dbConn, err := sql.Open("postgres", readDBURL())
 	if err != nil {
 		log.Fatalf("Could not connect to database: %v", err)
 	}
@@ -43,7 +32,8 @@ func main() {
 	apiCfg := &apiConfig{
 		fileserverHits: atomic.Int32{},
 		db:             database.New(dbConn),
-		JWTSecret:      JWTSecret,
+		JWTSecret:      readJWTSecret(),
+		polkaAPIKey:    readPolkaAPIKey(),
 	}
 	mux := http.NewServeMux()
 
@@ -61,7 +51,7 @@ func main() {
 	mux.HandleFunc("PUT /api/users", apiCfg.handleUpdateUser)
 	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.handleDeleteChirp)
 	mux.HandleFunc("POST /api/polka/webhooks", apiCfg.handlePolkaWebhook)
-	if platform == "dev" {
+	if readPlatform() == "dev" {
 		mux.HandleFunc("POST /admin/reset", apiCfg.handleReset)
 	}
 
@@ -71,4 +61,38 @@ func main() {
 	}
 
 	log.Fatal(server.ListenAndServe())
+}
+
+func readDBURL() string {
+	godotenv.Load()
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		log.Fatal("DB_URL environment variable is not set")
+	}
+	return dbURL
+}
+
+func readJWTSecret() string {
+	godotenv.Load()
+	JWTSecret := os.Getenv("JWT_SECRET")
+	if JWTSecret == "" {
+		log.Fatal("JWT_SECRET environment variable is not set")
+	}
+	return JWTSecret
+}
+
+func readPlatform() string {
+	platform := os.Getenv("PLATFORM")
+	if platform == "" {
+		log.Fatal("PLATFORM environment variable is not set")
+	}
+	return platform
+}
+
+func readPolkaAPIKey() string {
+	polkaAPIKey := os.Getenv("POLKA_API_KEY")
+	if polkaAPIKey == "" {
+		log.Fatal("POLKA_API_KEY environment variable is not set")
+	}
+	return polkaAPIKey
 }
