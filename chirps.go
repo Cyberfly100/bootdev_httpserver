@@ -109,10 +109,33 @@ func (cfg *apiConfig) handleCreateChirp(w http.ResponseWriter, r *http.Request) 
 
 func (cfg *apiConfig) handleGetChirps(w http.ResponseWriter, r *http.Request) {
 	const defaultLimit = 100
-	dbchirps, err := cfg.db.GetChirps(r.Context(), defaultLimit)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to retrieve chirps", err)
-		return
+
+	var dbchirps []database.Chirp
+
+	authorIDStr := r.URL.Query().Get("author_id")
+	if authorIDStr != "" {
+		authorID, err := uuid.Parse(authorIDStr)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "Invalid author_id format", err)
+			return
+		}
+
+		getChirpsByUserIDParams := database.GetChirpsByUserIDParams{
+			UserID: authorID,
+			Limit:  defaultLimit,
+		}
+		dbchirps, err = cfg.db.GetChirpsByUserID(r.Context(), getChirpsByUserIDParams)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Failed to retrieve chirps", err)
+			return
+		}
+	} else {
+		var err error
+		dbchirps, err = cfg.db.GetChirps(r.Context(), defaultLimit)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Failed to retrieve chirps", err)
+			return
+		}
 	}
 	chirps := make([]Chirp, len(dbchirps))
 	for i, dbchirp := range dbchirps {

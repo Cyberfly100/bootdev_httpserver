@@ -105,3 +105,45 @@ func (q *Queries) GetChirps(ctx context.Context, limit int32) ([]Chirp, error) {
 	}
 	return items, nil
 }
+
+const getChirpsByUserID = `-- name: GetChirpsByUserID :many
+SELECT id, created_at, updated_at, body, user_id
+FROM chirps
+WHERE user_id = $1
+ORDER BY created_at
+LIMIT $2
+`
+
+type GetChirpsByUserIDParams struct {
+	UserID uuid.UUID
+	Limit  int32
+}
+
+func (q *Queries) GetChirpsByUserID(ctx context.Context, arg GetChirpsByUserIDParams) ([]Chirp, error) {
+	rows, err := q.db.QueryContext(ctx, getChirpsByUserID, arg.UserID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Chirp
+	for rows.Next() {
+		var i Chirp
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Body,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
