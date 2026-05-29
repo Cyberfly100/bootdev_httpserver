@@ -33,10 +33,10 @@ func readPlatform() string {
 	return platform
 }
 
-func readPolkaAPIKey() string {
-	polkaAPIKey := os.Getenv("POLKA_API_KEY")
-	if polkaAPIKey == "" {
-		log.Fatal("POLKA_API_KEY environment variable is not set")
+func readPolkaKey() string {
+	polkaKey := os.Getenv("POLKA_KEY")
+	if polkaKey == "" {
+		log.Fatal("POLKA_KEY environment variable is not set")
 	}
-	return polkaAPIKey
+	return polkaKey
 }

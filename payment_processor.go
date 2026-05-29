@@ -5,10 +5,21 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/Cyberfly100/bootdev_httpserver/internal/auth"
 	"github.com/google/uuid"
 )
 
 func (cfg *apiConfig) handlePolkaWebhook(w http.ResponseWriter, r *http.Request) {
+	polkaKey, err := auth.GetAPIKey(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Missing or invalid Polka API key", err)
+		return
+	}
+	if polkaKey != cfg.polkaKey {
+		respondWithError(w, http.StatusUnauthorized, "Invalid Polka API key", nil)
+		return
+	}
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Failed to read request body", err)

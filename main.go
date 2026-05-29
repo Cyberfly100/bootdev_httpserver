@@ -14,7 +14,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
 	JWTSecret      string
-	polkaAPIKey    string
+	polkaKey       string
 }
 
 func main() {
@@ -31,7 +31,7 @@ func main() {
 		fileserverHits: atomic.Int32{},
 		db:             database.New(dbConn),
 		JWTSecret:      readJWTSecret(),
-		polkaAPIKey:    readPolkaAPIKey(),
+		polkaKey:       readPolkaKey(),
 	}
 	mux := http.NewServeMux()
 

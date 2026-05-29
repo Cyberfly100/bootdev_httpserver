@@ -41,3 +41,17 @@ func MakeRefreshToken() string {
 
 	return hex.EncodeToString(tokenBytes)
 }
+
+func GetAPIKey(headers http.Header) (string, error) {
+	apiKey := headers.Get("Authorization")
+	if apiKey == "" {
+		return "", errors.New("API key is missing")
+	}
+
+	const prefix = "ApiKey "
+	if !strings.HasPrefix(apiKey, prefix) {
+		return "", errors.New("API key must start with 'ApiKey '")
+	}
+
+	return strings.TrimPrefix(apiKey, prefix), nil
+}
