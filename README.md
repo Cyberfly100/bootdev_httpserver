@@ -2,7 +2,7 @@
 
 ## About
 
-A simplified Twitter API implementation built with Go, designed as a bootdev course project to learn HTTP webserver architecture and database utilization.
+A simplified Twitter API implementation built with Go, following a bootdev course project to learn HTTP webserver architecture and database utilization.
 
 ## Why This Project
 
@@ -26,7 +26,7 @@ A small-scale example demonstrating how to set up a webserver with multiple endp
 
 **Chirps (Twitter-like posts)**
 - `POST /api/chirps` - Create a new chirp (requires auth)
-- `GET /api/chirps` - Get all chirps
+- `GET /api/chirps` - Get all chirps (accepts optional query parameters author=ID and sort=desc)
 - `GET /api/chirps/{chirpID}` - Get chirp by ID
 - `DELETE /api/chirps/{chirpID}` - Delete chirp (requires auth)
 
@@ -43,10 +43,10 @@ A small-scale example demonstrating how to set up a webserver with multiple endp
 - `GET /api/healthz` - Health check
 - `GET /admin/metrics` - View server metrics
 - `POST /admin/resetmetrics` - Reset metrics counters
-- `POST /admin/reset` - Reset database (dev mode only)
+- `POST /admin/reset` - Reset database (dev mode only, set via .env)
 
 **Webhooks**
-- `POST /api/polka/webhooks` - Polka payment webhook handler
+- `POST /api/polka/webhooks` - Polka (fake Stripe) payment webhook handler
 
 **Static Files**
 - `GET /app/*` - Serve static files from project root
