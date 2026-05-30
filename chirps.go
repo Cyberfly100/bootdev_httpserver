@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -112,6 +113,14 @@ func (cfg *apiConfig) handleGetChirps(w http.ResponseWriter, r *http.Request) {
 
 	var dbchirps []database.Chirp
 
+	sorting_option := r.URL.Query().Get("sort")
+	switch sorting_option {
+	case "asc", "desc":
+	// valid sorting options, do nothing
+	default:
+		sorting_option = "asc"
+	}
+
 	authorIDStr := r.URL.Query().Get("author_id")
 	if authorIDStr != "" {
 		authorID, err := uuid.Parse(authorIDStr)
@@ -147,6 +156,10 @@ func (cfg *apiConfig) handleGetChirps(w http.ResponseWriter, r *http.Request) {
 			UserID:    dbchirp.UserID,
 		}
 	}
+	if sorting_option == "desc" {
+		sort.Slice(chirps, func(i, j int) bool { return chirps[i].CreatedAt.After(chirps[j].CreatedAt) })
+	}
+
 	respondWithJSON(w, http.StatusOK, chirps)
 }
 
